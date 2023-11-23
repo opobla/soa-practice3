@@ -1,9 +1,9 @@
 //********************************************************
-// Autor: SOA
+// Copyright [2023] The Operating System Team
 //********************************************************
 
-#ifndef _FAT32_H_
-#define _FAT32_H_
+#ifndef FATSOA_H_
+#define FATSOA_H_
 
 #include <stdint.h>
 
@@ -54,8 +54,8 @@ struct __attribute__((__packed__)) BS_Structure {
   uint8_t reserved1;
   uint8_t bootSignature;
   uint32_t volumeID;
-  uint8_t volumeLabel[11];    //"NO NAME "
-  uint8_t fileSystemType[8];  //"FAT32"
+  uint8_t volumeLabel[11];    // "NO NAME "
+  uint8_t fileSystemType[8];  // "FAT32"
   uint8_t bootData[420];
   uint16_t bootEndSignature;  // 0xaa55
 };
@@ -103,4 +103,4 @@ struct DIR_Structure {
 #define FAT_BAD_CLUSTER 0x0FFFFFF7
 #define FAT_LAST_CLUSTER 0x0FFFFFFF
 
-#endif
+#endif  // FATSOA_H_

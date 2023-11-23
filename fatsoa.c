@@ -1,9 +1,9 @@
 /*
     Fichero: fatfs.c
-    Autor: SOA
-*/
+    Copyright 2023. The Operating System Team
+ */
 
-#include "fatsoa.h"
+#include "./fatsoa.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -12,7 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "parser.h"
+#include "./parser.h"
 
 #define PROMPT_STRING "FATFS:"
 
@@ -23,10 +23,10 @@ uint32_t current_dir_cluster = 2;
 ssize_t bytes_read;
 uint32_t fat_begin_offset = 0;  // Desplazamiento de la FAT en la imagen
 
-struct BS_Structure
-    bs_data;  // Informaci'on del sector de arranque (boot sector)
-struct DIR_Structure
-    directory_info[16];  // Un sector, los 16 primeras entradas de un directorio
+struct BS_Structure bs_data;  // Informaci'on del sector de arranque (boot
+                              // sector)
+struct DIR_Structure directory_info[16];  // Un sector, los 16 primeras entradas
+                                          // de un directorio
 
 char prompt[512];
 
@@ -41,14 +41,14 @@ char prompt[512];
 
     Resultado:
         Entrada de la FAT
--------------------------------------------------------------- */
+   -------------------------------------------------------------- */
 uint32_t get_fat_entry(uint32_t cluster) {
   uint32_t fat_entry;
 
   lseek(fd, fat_begin_offset + (cluster << 2), SEEK_SET);
   bytes_read = read(fd, &fat_entry, sizeof(fat_entry));
 
-  printf("FAT entry %d: 0x%08X\n", cluster, fat_entry);
+  printf("FAT entry %u: 0x%08X\n", cluster, fat_entry);
 
   return fat_entry;
 }
@@ -67,7 +67,7 @@ uint32_t get_fat_entry(uint32_t cluster) {
 
     Antes de usar esta función es preciso leer el sector de boot
     y rellenar la estructura bs_data.
--------------------------------------------------------------- */
+   -------------------------------------------------------------- */
 uint32_t LBA2Offset(uint32_t cluster) {
   uint32_t offset;
 
@@ -103,15 +103,14 @@ uint32_t LBA2Offset(uint32_t cluster) {
     Por ejemplo:
         "LEEME.TXT"     =>  "LEEME   TXT"
         "SISTEMAS.DOC"  =>  "SISTEMASDOC"
--------------------------------------------------------------- */
+   -------------------------------------------------------------- */
 void fs_get(char *file_get) {
-  char file_name[11 +
-                 1];  // 11 Elementos posibles del nombre mas el fin de cadena
-  char
-      file_get_modificado[11 + 1 + 1];  // 11 Elementos posibles del directorio,
-                                        // mas el punto, mas el fin de cadena
+  // 11 potential characters pull the null-terminator
+  char file_name[11 + 1];
+
+  // 11 potential characters, plus the dot and the null-terminator
+  char file_get_modificado[11 + 1 + 1];
   int i = 0, file_found = 0;
-  uint32_t file_cluster, file_offset;
   char *p_punto = NULL;
 
   if (file_get == NULL) {
@@ -120,8 +119,8 @@ void fs_get(char *file_get) {
 
   p_punto = strchr(file_get, '.');
 
-  if (p_punto)  // Si hay punto
-  {
+  if (p_punto) {
+    // It it starts with a dot its a relative path
     *p_punto = '\0';
     memset(file_get_modificado, ' ', 11);
     memcpy(file_get_modificado, file_get, strlen(file_get));
@@ -132,7 +131,7 @@ void fs_get(char *file_get) {
     strcpy(file_get_modificado, file_get);
   }
 
-  printf("File name modificado: %s-[%ld]\n", file_get_modificado,
+  printf("File name modificado: %s-[%zu]\n", file_get_modificado,
          strlen(file_get_modificado));
 
   // sino hay punto lo comparamos tal cual
@@ -142,7 +141,7 @@ void fs_get(char *file_get) {
         memcpy(file_name, (const char *)directory_info[i].DIR_name, 11);
         file_name[11] = '\0';
 
-        printf("File name: %s-[%ld]\n", file_name, strlen(file_name));
+        printf("File name: %s-[%zu]\n", file_name, strlen(file_name));
 
         if (strcmp(file_name, file_get_modificado) == 0) {
           file_found = 1;
@@ -157,15 +156,15 @@ void fs_get(char *file_get) {
   } else {
     printf("%s found\n", file_get);
 
-    file_cluster = (directory_info[i - 1].firstClusterHI << 16) +
-                   (directory_info[i - 1].firstClusterLO);
+    int32_t file_cluster = (directory_info[i - 1].firstClusterHI << 16) +
+                           (directory_info[i - 1].firstClusterLO);
 
-    file_offset = LBA2Offset(file_cluster);
+    int32_t file_offset = LBA2Offset(file_cluster);
 
     printf("File: cluster inicio: 0x%X offset: 0x%X\n", file_cluster,
            file_offset);
 
-    // TODO:
+    // TODO(by the student):
     //      Copiar al exterior y con el mismo nombre el fichero que se encuentra
     //      a partir del offset teniendo en cuenta el tama;o y que puede ocupar
     //      uno o mas clusters
@@ -180,17 +179,23 @@ void fs_get(char *file_get) {
 
     Parámetro:
         attrib     Byte de atributos
--------------------------------------------------------------- */
+   -------------------------------------------------------------- */
 void print_attrib(uint8_t attrib) {
   if (attrib == ATTR_LONG_NAME) {
     printf("       - Long name\n");
   } else {
     if (attrib & ATTR_READ_ONLY) printf("       - Read only\n");
+
     if (attrib & ATTR_HIDDEN) printf("       - Hidden\n");
+
     if (attrib & ATTR_READ_ONLY) printf("       - Read only\n");
+
     if (attrib & ATTR_SYSTEM) printf("       - System\n");
+
     if (attrib & ATTR_VOLUME_ID) printf("       - Volume ID\n");
+
     if (attrib & ATTR_DIRECTORY) printf("       - Directory\n");
+
     if (attrib & ATTR_ARCHIVE) printf("       - Archive\n");
   }
 }
@@ -208,7 +213,7 @@ void print_attrib(uint8_t attrib) {
    directorio y rellenar la estructura directory_info. En la funcion
    "open" se lee el direcorio raiz y en la funci'on "cd" se lee
    cada vez que se cambia de directorio.
--------------------------------------------------------------- */
+   -------------------------------------------------------------- */
 void fs_stat() {
   char dir_name[12];
   int i;
@@ -220,16 +225,16 @@ void fs_stat() {
         dir_name[11] = '\0';
         printf("-------------------------\n");
         printf("DIR name: %s\n", dir_name);
-        printf("DIR attrib: %d\n", (uint32_t)directory_info[i].DIR_attrib);
+        printf("DIR attrib: %u\n", (uint32_t)directory_info[i].DIR_attrib);
         print_attrib(directory_info[i].DIR_attrib);
-        printf("DIR firstClusterHI: %d\n",
+        printf("DIR firstClusterHI: %u\n",
                (uint32_t)directory_info[i].firstClusterHI);
-        printf("DIR firstClusterLO: %d\n",
+        printf("DIR firstClusterLO: %u\n",
                (uint32_t)directory_info[i].firstClusterLO);
         printf("Image offset: 0x%X\n",
                LBA2Offset((directory_info[i].firstClusterHI << 16) +
                           directory_info[i].firstClusterLO));
-        printf("DIR fileSize: %d [%X]\n", (uint32_t)directory_info[i].fileSize,
+        printf("DIR fileSize: %u [%X]\n", (uint32_t)directory_info[i].fileSize,
                (uint32_t)directory_info[i].fileSize);
       }
     }
@@ -240,7 +245,7 @@ void fs_stat() {
     fs_ls ()
 
     Imprime el listado del contenido del directorio actual.
--------------------------------------------------------------- */
+   -------------------------------------------------------------- */
 void fs_ls() {
   char dir_name[12];
   int i;
@@ -251,7 +256,6 @@ void fs_ls() {
         memcpy(dir_name, (const char *)directory_info[i].DIR_name, 11);
         dir_name[11] = '\0';
         printf("<DIR> %s\n", dir_name);
-
       } else if (directory_info[i].DIR_attrib & ATTR_ARCHIVE) {
         memcpy(dir_name, (const char *)directory_info[i].DIR_name, 11);
         dir_name[11] = '\0';
@@ -266,7 +270,7 @@ void fs_ls() {
 
     Cambia el directorio actual y rellena la estructura
     directory_info.
--------------------------------------------------------------- */
+   -------------------------------------------------------------- */
 void fs_cd(char *new_dir) {
   char dir_name[12], *p;
   int i = 0, dir_found = 0;
@@ -304,10 +308,11 @@ void fs_cd(char *new_dir) {
 
   if (!dir_found) {
     printf("%s not found\n", new_dir);
-  } else  // update current path and prompt
-  {
+  } else {
+    // update current path and prompt
     if (strcmp(new_dir, "..") == 0) {
       p = strrchr(current_path, '/');
+
       if (p != current_path) {
         *p = '\0';
       } else {
@@ -332,7 +337,7 @@ void fs_cd(char *new_dir) {
 
     Imprime la informacion del Boot Sector. Esta informacion se
     lee en la funcion open al abrir el volumen.
--------------------------------------------------------------- */
+   -------------------------------------------------------------- */
 void fs_volumen(void) {
   char file_system_type[9];
 
@@ -340,11 +345,11 @@ void fs_volumen(void) {
   strncpy(file_system_type, (const char *)bs_data.fileSystemType, 8);
   printf("File system type: %s\n", file_system_type);
 
-  printf("Bytes per Sector: %d\n", (uint32_t)bs_data.bytesPerSector);
-  printf("Sectors per Cluster: %d\n", (uint32_t)bs_data.sectorPerCluster);
-  printf("Reserved Sectors Count: %d\n", (uint32_t)bs_data.reservedSectorCount);
-  printf("Number of FATs: %d\n", (uint32_t)bs_data.numberofFATs);
-  printf("FAT sectors size: %d\n", (uint32_t)bs_data.FATsize_F32);
+  printf("Bytes per Sector: %u\n", (uint32_t)bs_data.bytesPerSector);
+  printf("Sectors per Cluster: %u\n", (uint32_t)bs_data.sectorPerCluster);
+  printf("Reserved Sectors Count: %u\n", (uint32_t)bs_data.reservedSectorCount);
+  printf("Number of FATs: %u\n", (uint32_t)bs_data.numberofFATs);
+  printf("FAT sectors size: %u\n", (uint32_t)bs_data.FATsize_F32);
   printf("FAT begin offset:      0x%04X\n", fat_begin_offset);
   printf("CLUSTERs begin offset: 0x%04X\n", LBA2Offset(2));
   printf("End Signature: 0x%04X\n", (uint16_t)bs_data.bootEndSignature);
@@ -356,11 +361,12 @@ void fs_volumen(void) {
 
     Realiza la apertura del fichero que contiene la imagen del
     volumen FAT32..
--------------------------------------------------------------- */
+   -------------------------------------------------------------- */
 int open_file(char *file_name) {
   uint32_t offset;
 
   fd = open(file_name, O_RDONLY);
+
   if (fd == -1) {
     printf("Image file %s does not exist\n", file_name);
     return 0;
@@ -403,8 +409,8 @@ int main(int argc, char *argv[]) {
 
   printf("Introduzca órdenes (pulse Ctrl-D para terminar)\n");
 
-  do  // Leer órdenes y mostrarlas
-  {
+  do {
+    // Read and show the commands
     inicializar_orden(&O);
 
     printf("%s", prompt);
@@ -414,10 +420,10 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    if (res < 0)
+    if (res < 0) {
       fprintf(stderr, "\nError %d: %s\n", -res, mensajes_err[-res]);
-    else  // procesar orden
-    {
+    } else {
+      // Process the command
       // mostrar_orden (&O);
 
       if (strcmp(O.argv[0], "open") == 0) {
@@ -450,7 +456,6 @@ int main(int argc, char *argv[]) {
     }
 
     liberar_orden(&O);
-
   } while (res == 0);  // Repetir hasta error o EOF
 
   return 0;

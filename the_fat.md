@@ -15,9 +15,13 @@ The structure overview of a FAT32 file system is as follows:
 
 The disk begins with a series of reserved sectors, the first sector known as the Volume ID contains the BIOS Parameter Block (BPB), also called Boot Sector (BS) or sector 0. It is the first sector of the media and contains the elementary information of the device.
 
-Next, the "File Allocation Table" (FAT) is located. The FAT is in the form of a table organized in successive 32-bit entries. One entry for each cluster of the file system.  These entries allow to know the state of each one of these clusters, that is to say, they know if they are defective or not, if they contain or not information and, if it is like that, if they correspond with the last cluster of the file or, on the other hand, if the file continues in some other cluster. Of the 32 bits of each entry only the lower 28 are used, the top four are reserved.
+Next, the "File Allocation Table" (FAT) is located. The FAT is in the form of a table organized in successive 32-bit entries, and each entry corresponds to a cluster number in the filesystem. Clusters are the basic units of logical storage on a FAT volume. A cluster can range in size from 512 bytes to 64 kilobytes, depending on volume size and type of FAT file system. A file is made up of one or many clusters, depending on the file size. The PBP defines, among other things, how many sectors per cluster are used.
 
-At the end are the sectors of the disk dedicated to store the information of directories and files. The allocation unit is the cluster. A cluster is formed by one or several sectors. This is defined in the BPB.
+The FAT entries allows to know the status or purpose of each one of the clusters, i.e. if the corresponding cluster is defective or not, if it contains or not information, if it is the last cluster of a file or if the file continues in other cluster. 
+
+Of the 32 bits of each entry in the FAT only the least 28 significative bits (LSB) bits are used. The four MSB are reserved.
+
+Finally, at the end of the file system, there are the sectors of the disk where to store the information of directories and files. 
 
 ## The `Volume ID`
 
@@ -93,6 +97,33 @@ $ hexdump -C -n 512 fatsoa.fs
 ```
 
 In the previous dump you can find, among other information, the magic number (signature) `0xAA55` that marks the end of the boot sector.
+
+You can read the volume of a filesystem using the `fatsoa` util using the
+command `volumen` as shown in the following example:
+
+```bash=
+$ ./fatsoa
+Introduzca órdenes (pulse Ctrl-D para terminar)
+FATFS:open fatsoa.fs
+fatsoa.fs opened.
+FATFS:/ volumen
+
+-------------------------
+File system type: FAT32
+Bytes per Sector: 512
+Sectors per Cluster: 8
+Reserved Sectors Count: 32
+Number of FATs: 2
+FAT sectors size: 200
+FAT begin offset:      0x4000
+CLUSTERs begin offset: 0x36000
+End Signature: 0xAA55
+-------------------------
+```
+
+In our practice file system, a cluster is made up of 8 sector, and each sector
+is 512 bytes, therefore a cluster is 4KiB.
+
 
 ## The File Allocation Table (FAT)
 
